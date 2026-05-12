@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import Response
+import msgpack
 import httpx
 from app.config import (
     AUTH_SERVICE_URL,
@@ -38,7 +39,21 @@ async def validate_token(token: str) -> bool:
     except Exception:
         return False
 
+async def validate_token_msgpack(token: str) -> bool:
+    try:
+        async with httpx.AsyncClient() as client:
+            body = msgpack.packb({"token": token})
 
+            response  = await client.post(
+                f"{AUTH_SERVICE_URL}/auth/validate/msgpack",
+                content=body,
+                headers={"Content-Type": "application/msgpack"},
+                timeout=5,
+            )
+            data = msgpack.unpackb(response.content, raw=False)
+            return data.get("valid")
+    except Exception:
+        return False
 async def proxy(request: Request, target_url: str) -> Response:
     async with httpx.AsyncClient() as client:
         body = await request.body()
@@ -81,7 +96,7 @@ async def gateway(request: Request, path: str):
             raise HTTPException(status_code=401, detail="Токен не передан")
 
         token = auth_header.split(" ")[1]
-        valid = await validate_token(token)
+        valid = await validate_token_msgpack(token)
         if not valid:
             raise HTTPException(status_code=401, detail="Токен недействителен")
 

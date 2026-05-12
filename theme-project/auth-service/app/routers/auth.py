@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+
+import msgpack
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import FastAPIResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -68,7 +71,6 @@ def me(
 
 @router.get("/validate", response_model=ValidateResponse)
 def validate(
-    
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)):
 
@@ -80,8 +82,7 @@ def validate(
  
     if not payload:
         return ValidateResponse(valid=False)
- 
-    # Проверяем что пользователь ещё существует в БД
+    
     user = db.query(User).filter(User.id == payload["sub"]).first()
     if not user:
         return ValidateResponse(valid=False)
@@ -91,3 +92,43 @@ def validate(
         user_id=str(user.id),
         email=user.email,
     )
+
+async def validate_msgpack(request: Request, db: Session = Depends(get_db)):
+    body  = await request.body()
+    data = msgpack.unpackb(body, raw=False)
+
+    token = data.get('token')
+    if not token:
+        result = {"valid": False, "user_id": None, "email": None}
+        return FastAPIResponse(
+            content=msgpack.packb(result),
+            media_type="application/msgpack"
+        )
+    
+    payload = decode_token(token)
+    if not payload:
+        result = {"valid": False, "user_id": None, "email": None}
+        return FastAPIResponse(
+            content=msgpack.packb(result),
+            media_type="application/msgpack"
+        )
+    
+    user = db.query(User).filter(User.id == payload["sub"]).first()
+    if not user:
+        result = {"valid": False, "user_id": None, "email": None}
+        return FastAPIResponse(
+            content=msgpack.packb(result),
+            media_type="application/msgpack"
+        )
+    
+    result = {
+        "valid": True,
+        "user_id": str(user.id),
+        "email": user.email,
+    }
+
+    return FastAPIResponse(
+        content=msgpack.packb(result),
+        media_type="application/msgpack"
+    )
+
