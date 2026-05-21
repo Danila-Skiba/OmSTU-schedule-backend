@@ -51,17 +51,21 @@ async def validate_token_msgpack(token: str) -> bool:
                 timeout=5,
             )
             data = msgpack.unpackb(response.content, raw=False)
-            return data.get("valid")
+            return data
     except Exception:
-        return False
-async def proxy(request: Request, target_url: str) -> Response:
+        return {'valid': False}
+async def proxy(request: Request, target_url: str, user_id: str ) -> Response:
     async with httpx.AsyncClient() as client:
         body = await request.body()
+
+        headers = {i: v for i, v in request.headers.items() if i.lower() != 'host'}
+        if user_id: 
+            headers['X-User-Id'] = user_id
 
         response = await client.request(
             method=request.method,
             url=target_url,
-            headers={k: v for k, v in request.headers.items() if k.lower() != "host"},
+            headers=headers, 
             content=body,
             params=request.query_params,
             timeout=30,
@@ -81,6 +85,7 @@ async def gateway(request: Request, path: str):
 
     target_base = None
     service_prefix = None
+    user_id = None 
     for prefix, url in ROUTES.items():
         if full_path.startswith(prefix):
             target_base = url
@@ -96,16 +101,19 @@ async def gateway(request: Request, path: str):
             raise HTTPException(status_code=401, detail="Токен не передан")
 
         token = auth_header.split(" ")[1]
-        valid = await validate_token_msgpack(token)
-        if not valid:
+        user_data  = await validate_token_msgpack(token)
+        # print(f"user_data: {user_data}")
+        if not user_data.get('valid'):
             raise HTTPException(status_code=401, detail="Токен недействителен")
+        
+        user_id = user_data.get('user_id')
 
     # Убираем /api prefix и проксируем
     # /api/news/images/123 → /news/images/123
     service_path = full_path.replace("/api", "", 1)
     target_url = f"{target_base}{service_path}"
 
-    return await proxy(request, target_url)
+    return await proxy(request, target_url, user_id)
 
 
 @app.get("/health")

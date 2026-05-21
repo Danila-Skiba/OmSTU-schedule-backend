@@ -1,38 +1,55 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File
 from app.database import get_db
 from fastapi.responses import Response
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+# from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.models.lecture import Session, Fragment
 from sqlalchemy.orm import Session as DBSession
 from app.config import settings
 from app.services.gigachat import send_photo, compile_fragments
 import uuid
+import msgpack
 from datetime import datetime
-import httpx
+# import httpx
 
-security = HTTPBearer()
+# security = HTTPBearer()
 router = APIRouter(prefix="/lectures", tags=["lectures"])
 
-def get_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    if not credentials:
+# def get_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+#     if not credentials:
+#         raise HTTPException(status_code=401, detail="Токен не передан")
+
+#     token = credentials.credentials
+#     try:
+#         response = httpx.get(
+#             f"{settings.AUTH_SERVICE_URL}/auth/validate",
+#             headers={"Authorization": f"Bearer {token}"},
+#             timeout = 5
+#         )
+#         data = response.json()
+#     except Exception as e:
+#         raise HTTPException(status_code=403, detail="Auth сервис не доступен")
+    
+#     if not data.get("valid"):
+#         raise HTTPException(status_code=403, detail="Токен недействителен")
+
+#     return data["user_id"]
+
+def get_user_id(x_user_id: str = Header(None, alias="X-User-Id")):
+    if not x_user_id:
         raise HTTPException(status_code=401, detail="Токен не передан")
+    return x_user_id
 
-    token = credentials.credentials
-    try:
-        response = httpx.get(
-            f"{settings.AUTH_SERVICE_URL}/auth/validate",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout = 5
-        )
-        data = response.json()
-    except Exception as e:
-        raise HTTPException(status_code=403, detail="Auth сервис не доступен")
     
-    if not data.get("valid"):
-        raise HTTPException(status_code=403, detail="Токен недействителен")
 
-    return data["user_id"]
-    
+# def get_user_id_msgpack(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+#     if not credentials:
+#         raise HTTPException(status_code=401, detail="Токен не передан")
+
+#     token = credentials.credentials
+#     try:
+#         body = msgpack.packb({"token": token})
+
+
 
 
 @router.post("/session")
@@ -152,8 +169,6 @@ def get_lectures(
         }
         for s in sessions
     ]
-
-
 
 @router.get("/session/{session_id}")
 def get_session(

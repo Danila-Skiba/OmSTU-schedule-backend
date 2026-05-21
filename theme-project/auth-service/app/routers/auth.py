@@ -1,10 +1,8 @@
 
 import msgpack
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import FastAPIResponse
 from sqlalchemy.orm import Session
-from typing import Optional
 
 from app.database import get_db
 from app.models.user import User
@@ -92,7 +90,7 @@ def validate(
         user_id=str(user.id),
         email=user.email,
     )
-
+@router.post("/validate/msgpack")
 async def validate_msgpack(request: Request, db: Session = Depends(get_db)):
     body  = await request.body()
     data = msgpack.unpackb(body, raw=False)
@@ -100,7 +98,7 @@ async def validate_msgpack(request: Request, db: Session = Depends(get_db)):
     token = data.get('token')
     if not token:
         result = {"valid": False, "user_id": None, "email": None}
-        return FastAPIResponse(
+        return Response(
             content=msgpack.packb(result),
             media_type="application/msgpack"
         )
@@ -108,7 +106,7 @@ async def validate_msgpack(request: Request, db: Session = Depends(get_db)):
     payload = decode_token(token)
     if not payload:
         result = {"valid": False, "user_id": None, "email": None}
-        return FastAPIResponse(
+        return Response(
             content=msgpack.packb(result),
             media_type="application/msgpack"
         )
@@ -116,7 +114,7 @@ async def validate_msgpack(request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == payload["sub"]).first()
     if not user:
         result = {"valid": False, "user_id": None, "email": None}
-        return FastAPIResponse(
+        return Response(
             content=msgpack.packb(result),
             media_type="application/msgpack"
         )
@@ -127,7 +125,7 @@ async def validate_msgpack(request: Request, db: Session = Depends(get_db)):
         "email": user.email,
     }
 
-    return FastAPIResponse(
+    return Response(
         content=msgpack.packb(result),
         media_type="application/msgpack"
     )
