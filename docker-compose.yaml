@@ -30,6 +30,7 @@ services:
     container_name: omstu-auth
     ports:
       - "8002:8000"
+      - "50051:50051"
     environment:
       - DATABASE_URL=postgresql://omstu:${POSTGRES_PASSWORD}@omstu-postgres/omstu_db
       - SECRET_KEY=${SECRET_KEY}
@@ -101,6 +102,7 @@ services:
       - NEWS_SERVICE_URL=http://omstu-news:8000
       - SCHEDULE_SERVICE_URL=http://omstu-schedule:8000
       - LECTURE_SERVICE_URL=http://omstu-lecture:8000
+      - AUTH_GRPC_URL=omstu-auth:50051
     depends_on:
       - auth-service
       - news-service
