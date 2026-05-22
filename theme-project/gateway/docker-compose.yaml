@@ -11,6 +11,7 @@ services:
       - NEWS_SERVICE_URL=http://omstu-news:8000
       - SCHEDULE_SERVICE_URL=http://omstu-schedule:8000
       - LECTURE_SERVICE_URL=http://omstu-lecture:8000
+      - AUTH_GRPC_URL=omstu-auth:50051
     networks:
       - omstu-network
     restart: unless-stopped

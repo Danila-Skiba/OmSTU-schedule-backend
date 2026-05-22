@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import Response
 import msgpack
 import httpx
+from app.grpc_client import validate_token_grpc
 from app.config import (
     AUTH_SERVICE_URL,
     NEWS_SERVICE_URL,
@@ -39,7 +40,7 @@ async def validate_token(token: str) -> bool:
     except Exception:
         return False
 
-async def validate_token_msgpack(token: str) -> bool:
+async def validate_token_msgpack(token: str) -> dict:
     try:
         async with httpx.AsyncClient() as client:
             body = msgpack.packb({"token": token})
@@ -101,7 +102,7 @@ async def gateway(request: Request, path: str):
             raise HTTPException(status_code=401, detail="Токен не передан")
 
         token = auth_header.split(" ")[1]
-        user_data  = await validate_token_msgpack(token)
+        user_data  = await validate_token_grpc(token)
         # print(f"user_data: {user_data}")
         if not user_data.get('valid'):
             raise HTTPException(status_code=401, detail="Токен недействителен")
