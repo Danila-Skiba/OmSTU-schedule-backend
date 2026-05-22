@@ -102,7 +102,7 @@ async def gateway(request: Request, path: str):
             raise HTTPException(status_code=401, detail="Токен не передан")
 
         token = auth_header.split(" ")[1]
-        user_data  = await validate_token_grpc(token)
+        user_data  = validate_token_grpc(token)
         # print(f"user_data: {user_data}")
         if not user_data.get('valid'):
             raise HTTPException(status_code=401, detail="Токен недействителен")
