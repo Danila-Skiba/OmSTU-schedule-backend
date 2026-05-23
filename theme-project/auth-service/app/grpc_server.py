@@ -11,7 +11,7 @@ class AuthServicer(auth_pb2_grpc.AuthServiceServicer):
     def ValidateToken(self, request, context):
         token = request.token
         db = SessionLocal()
-
+        
         try:
             payload = decode_token(token)
             if not payload:
@@ -35,5 +35,4 @@ def serve():
     auth_pb2_grpc.add_AuthServiceServicer_to_server(AuthServicer(), server)
     server.add_insecure_port("[::]:50051")
     server.start()
-    print("gRPC сервер запущен на порту 50051")
     server.wait_for_termination()

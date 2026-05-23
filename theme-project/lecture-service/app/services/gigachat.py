@@ -39,7 +39,7 @@ STRUCTURE_PROMPT = """
 def get_client() -> GigaChat:
     return GigaChat(
         credentials = settings.GIGACHAT_API,
-        model="GigaChat-Pro",
+        model="GigaChat-Max",
         verify_ssl_certs=False,
     )
 
