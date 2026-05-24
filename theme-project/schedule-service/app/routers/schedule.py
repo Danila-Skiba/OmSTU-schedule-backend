@@ -74,7 +74,7 @@ def get_schedule(entity_type: str, entity_id: str, date_from: date, date_to: dat
 
         if cached:
             age = datetime.now() - cached.fetched_at
-            if age.total_seconds() < settings.SCHEDULE_TTL * 3600:
+            if age.total_seconds() <  settings.SCHEDULE_TTL * 3600:
                 result.extend(cached.data)
                 current_date += timedelta(days=1)
                 continue

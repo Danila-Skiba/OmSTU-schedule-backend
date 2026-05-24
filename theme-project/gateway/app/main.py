@@ -19,10 +19,10 @@ app = FastAPI(
 
 # Маршруты
 ROUTES = {
-    "/api/auth":     AUTH_SERVICE_URL,
-    "/api/news":     NEWS_SERVICE_URL,
-    "/api/schedule": SCHEDULE_SERVICE_URL,
-    "/api/lectures": LECTURE_SERVICE_URL,
+    "/api/auth":     (AUTH_SERVICE_URL,     "/auth"),
+    "/api/news":     (NEWS_SERVICE_URL,     ""),    
+    "/api/schedule": (SCHEDULE_SERVICE_URL, "/schedule"),
+    "/api/lectures": (LECTURE_SERVICE_URL,  "/lectures"),
 }
 
 
@@ -87,10 +87,10 @@ async def gateway(request: Request, path: str):
     target_base = None
     service_prefix = None
     user_id = None 
-    for prefix, url in ROUTES.items():
+    for prefix, (url, service_prefix) in ROUTES.items():
         if full_path.startswith(prefix):
             target_base = url
-            service_prefix = prefix
+            service_path = service_prefix + full_path[len(prefix):]
             break
 
     if not target_base:
@@ -111,7 +111,6 @@ async def gateway(request: Request, path: str):
 
     # Убираем /api prefix и проксируем
     # /api/news/images/123 → /news/images/123
-    service_path = full_path.replace("/api", "", 1)
     target_url = f"{target_base}{service_path}"
 
     return await proxy(request, target_url, user_id)

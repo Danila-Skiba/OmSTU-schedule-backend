@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    TELEGRAM_BOT_TOKEN: str
+    TELEGRAM_BOT_USERNAME: str
 
 
 settings = Settings()

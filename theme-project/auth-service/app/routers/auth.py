@@ -1,9 +1,10 @@
 
 import msgpack
+import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -40,7 +41,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    access_token = create_access_token({"sub": str(user.id), "email": user.email})
+    access_token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
 
     return TokenResponse(access_token=access_token)
 
@@ -129,4 +130,86 @@ async def validate_msgpack(request: Request, db: Session = Depends(get_db)):
         content=msgpack.packb(result),
         media_type="application/msgpack"
     )
+
+from app.models.telegram import TelegramAuthSession
+import hmac
+import hashlib
+
+@router.post("/telegram/init")
+def telegram_init(
+    db: Session = Depends(get_db)
+):
+    state = secrets.token_urlsafe(32)
+    session = TelegramAuthSession(state = state)
+    db.add(session)
+    db.commit()
+
+    return {
+        "state": state,
+        "bot_url": f"https://t.me/{settings.TELEGRAM_BOT_USERNAME}?start={state}"
+    }
+
+
+@router.post("/telegram/webhook")
+def telegram_webhook(
+    request: dict,
+    db: Session = Depends(get_db)
+):
+    state = request.get('state')
+    tg_id = request.get('tg_id')
+    username  = request.get("username", "")
+    full_name = request.get("full_name", "")
+    secret = request.get("secret")
+
+    #секретная подпись получаемого сообщения. Убеждаемся, что получаем сообщение от нашего бота
+    expected = hmac.new(
+        settings.TELEGRAM_BOT_TOKEN.encode(), # ключ
+        f"{tg_id}:{state}".encode(), # данные
+        hashlib.sha256 # алгоритм
+    ).hexdigest()
+
+    if secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    session = db.query(TelegramAuthSession).filter_by(state=state).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    email = f"{tg_id}"
+    user = db.query(User).filter_by(email=email).first()
+    if not user:
+        user = User(email = email, name = full_name, role = 'user', password = hash_password(secrets.token_urlsafe(32)))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    token = create_access_token({
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role
+    })
+
+    session.jwt_token = token
+    db.commit()
+
+    return {"ok": True}
+
+@router.get("/telegram/token")
+def telegram_token(state: str, db: Session = Depends(get_db)):
+    session = db.query(TelegramAuthSession).filter_by(state=state).first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if not session.jwt_token:
+        return {"ready": False}
+
+    token = session.jwt_token
+    db.delete(session)
+    db.commit()
+    return {"ready": True, "access_token": token}
+
+
+    
+
 

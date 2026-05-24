@@ -10,3 +10,4 @@ python-multipart==0.0.9
 msgpack==1.0.7
 grpcio==1.62.1
 grpcio-tools==1.62.1
+python-telegram-bot==20.7

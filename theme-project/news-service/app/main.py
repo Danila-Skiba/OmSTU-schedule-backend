@@ -10,7 +10,7 @@ UPLOAD_FOLDER = './data/images'
 def get_image_path(id: str):
     return os.path.join(UPLOAD_FOLDER, f'{id}/image.jpg')
 
-@app.get("/news")
+@app.get("/")
 def get_news():
     
     with open(NEWS_FILE, 'r', encoding='utf-8') as f:
