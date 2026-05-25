@@ -155,6 +155,8 @@ def telegram_webhook(
     request: dict,
     db: Session = Depends(get_db)
 ):
+    
+    print("Попали в телеграм вебхук")
     state = request.get('state')
     tg_id = request.get('tg_id')
     username  = request.get("username", "")

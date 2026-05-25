@@ -7,7 +7,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 BOT_TOKEN      = os.getenv("TELEGRAM_BOT_TOKEN")
-AUTH_SERVICE = "http://auth-service:8000"
+AUTH_SERVICE = "http://136.234.124.48:8000/api"
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
