@@ -5,6 +5,7 @@ import os
 import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.request import HTTPXRequest
 
 BOT_TOKEN      = os.getenv("TELEGRAM_BOT_TOKEN")
 AUTH_SERVICE = "http://136.234.124.48:8000/api"
@@ -53,7 +54,17 @@ def run_bot():
     asyncio.set_event_loop(loop)
     
     async def _run():
-        app = Application.builder().token(BOT_TOKEN).build()
+        app = Application.builder() \
+    .token(BOT_TOKEN) \
+    .request(
+        HTTPXRequest(
+            connect_timeout=30,
+            read_timeout=30,
+            write_timeout=30,
+            pool_timeout=30,
+        )
+    ) \
+    .build()
         app.add_handler(CommandHandler("start", start))
         
         await app.initialize()
